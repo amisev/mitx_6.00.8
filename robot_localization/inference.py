@@ -64,7 +64,12 @@ def forward_backward(observations):
     for index, current_state in enumerate(all_possible_hidden_states):
         for next_state, next_state_probability in dict(robot.transition_model(current_state)).items():
             A[index, all_possible_hidden_states.index(next_state)] = next_state_probability
-    
+    #define observation matrix
+    B = np.zeros((len(all_possible_hidden_states), len(all_possible_observed_states)))
+    for index, current_state in enumerate(all_possible_hidden_states):
+        for next_state, next_state_probability in dict(robot.observation_model(current_state)).items():
+            B[index, all_possible_observed_states.index(next_state)] = next_state_probability
+            
     num_time_steps = len(observations)
     forward_messages = [None] * num_time_steps
     forward_messages[0] = [prior_distribution]

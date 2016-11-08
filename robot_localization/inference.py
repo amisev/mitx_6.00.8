@@ -58,28 +58,34 @@ def forward_backward(observations):
     # -------------------------------------------------------------------------
     # YOUR CODE GOES HERE
     #
-    
-    #define transition matrix
+
+    # define transition matrix
     A = np.zeros((len(all_possible_hidden_states), len(all_possible_hidden_states)))
     for index, current_state in enumerate(all_possible_hidden_states):
         for next_state, next_state_probability in dict(robot.transition_model(current_state)).items():
             A[index, all_possible_hidden_states.index(next_state)] = next_state_probability
-    #define observation matrix
+    # define observation matrix
     B = np.zeros((len(all_possible_hidden_states), len(all_possible_observed_states)))
     for index, current_state in enumerate(all_possible_hidden_states):
         for next_state, next_state_probability in dict(robot.observation_model(current_state)).items():
             B[index, all_possible_observed_states.index(next_state)] = next_state_probability
-            
+
+    # list(map(lambda x_i: None if x_i is None else all_possible_observed_states.index(x_i) , x))
+
     num_time_steps = len(observations)
     forward_messages = [None] * num_time_steps
     forward_messages[0] = [prior_distribution]
     # TODO: Compute the forward messages
+    for i, o in enumerate(observations[:-1]):
+            fm = robot.Distribution(dict(zip(all_possible_hidden_states, np.sum([forward_messages[i][0][state]*B[j, all_possible_observed_states.index(o)]*A[j, :].T for j, state in enumerate(all_possible_hidden_states)], axis=0))))
+            fm.renormalize()
+            forward_messages[i+1] = [fm]
 
     backward_messages = [None] * num_time_steps
     # TODO: Compute the backward messages
 
     marginals = [None] * num_time_steps # remove this
-    # TODO: Compute the marginals 
+    # TODO: Compute the marginals
 
     return marginals
 

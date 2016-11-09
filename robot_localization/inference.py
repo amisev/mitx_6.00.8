@@ -98,22 +98,29 @@ def forward_backward(observations):
     # next backward messages
     for i, o in enumerate(observations[::-1][1:-1]):
             if o == None:
-                fm = robot.Distribution(dict(zip(all_possible_hidden_states, np.sum([backward_messages[i][0][state]*1*A[:, j] for j, state in enumerate(all_possible_hidden_states)], axis=0))))
+                fm = robot.Distribution(dict(zip(all_possible_hidden_states, np.sum([backward_messages[num_time_steps - i - 1][0][state]*1*A[:, j] for j, state in enumerate(all_possible_hidden_states)], axis=0))))
             else:
-                fm = robot.Distribution(dict(zip(all_possible_hidden_states, np.sum([backward_messages[i][0][state]*B[j, all_possible_observed_states.index(o)]*A[:, j] for j, state in enumerate(all_possible_hidden_states)], axis=0))))
+                fm = robot.Distribution(dict(zip(all_possible_hidden_states, np.sum([backward_messages[num_time_steps - i - 1][0][state]*B[j, all_possible_observed_states.index(o)]*A[:, j] for j, state in enumerate(all_possible_hidden_states)], axis=0))))
             fm.renormalize()
             backward_messages[num_time_steps - i - 2] = [fm]
 
     marginals = [None] * num_time_steps # remove this
     # TODO: Compute the marginals
-    for i, o in enumerate(observations):
+    for i, o in enumerate(observations[:-1]):
             if o == None:
-                fm = robot.Distribution(dict(zip(all_possible_hidden_states, np.sum([forward_messages[i]*backward_messages[i][0][state]*1*A[:, j] for j, state in enumerate(all_possible_hidden_states)], axis=0))))
+                fm = robot.Distribution(dict(zip(all_possible_hidden_states, [forward_messages[i][0][state]*backward_messages[i+1][0][state]*1 for j, state in enumerate(all_possible_hidden_states)])))
             else:
-                fm = robot.Distribution(dict(zip(all_possible_hidden_states, np.sum([backward_messages[i][0][state]*B[j, all_possible_observed_states.index(o)]*A[:, j] for j, state in enumerate(all_possible_hidden_states)], axis=0))))
+                fm = robot.Distribution(dict(zip(all_possible_hidden_states, [forward_messages[i][0][state]*backward_messages[i+1][0][state]*B[j, all_possible_observed_states.index(o)] for j, state in enumerate(all_possible_hidden_states)])))
             fm.renormalize()
-            backward_messages[i+1] = [fm]
-
+            marginals[i] = [fm]
+    # in last marginal we exclude backward part
+    for i, o in enumerate(observations[-1:]):
+            if o == None:
+                fm = robot.Distribution(dict(zip(all_possible_hidden_states, [forward_messages[num_time_steps - 1][0][state]*1 for j, state in enumerate(all_possible_hidden_states)])))
+            else:
+                fm = robot.Distribution(dict(zip(all_possible_hidden_states, [forward_messages[num_time_steps - 1][0][state]*B[j, all_possible_observed_states.index(o)] for j, state in enumerate(all_possible_hidden_states)])))
+            fm.renormalize()
+            marginals[num_time_steps - 1] = [fm]
 
     return marginals
 

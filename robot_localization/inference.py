@@ -112,7 +112,7 @@ def forward_backward(observations):
             else:
                 fm = robot.Distribution(dict(zip(all_possible_hidden_states, [forward_messages[i][0][state]*backward_messages[i+1][0][state]*B[j, all_possible_observed_states.index(o)] for j, state in enumerate(all_possible_hidden_states)])))
             fm.renormalize()
-            marginals[i] = [fm]
+            marginals[i] = fm
     # in last marginal we exclude backward part
     for i, o in enumerate(observations[-1:]):
             if o == None:
@@ -120,7 +120,7 @@ def forward_backward(observations):
             else:
                 fm = robot.Distribution(dict(zip(all_possible_hidden_states, [forward_messages[num_time_steps - 1][0][state]*B[j, all_possible_observed_states.index(o)] for j, state in enumerate(all_possible_hidden_states)])))
             fm.renormalize()
-            marginals[num_time_steps - 1] = [fm]
+            marginals[num_time_steps - 1] = fm
 
     return marginals
 

@@ -141,9 +141,44 @@ def Viterbi(observations):
     # -------------------------------------------------------------------------
     # YOUR CODE GOES HERE
     #
-
-
+    # define transition matrix    
+    A = np.zeros((len(all_possible_hidden_states), len(all_possible_hidden_states)))    
+    for index, current_state in enumerate(all_possible_hidden_states):
+        for next_state, next_state_probability in dict(robot.transition_model(current_state)).items():
+            A[index, all_possible_hidden_states.index(next_state)] = next_state_probability    
+    # define observation matrix    
+    B = np.zeros((len(all_possible_hidden_states), len(all_possible_observed_states)))    
+    for index, current_state in enumerate(all_possible_hidden_states):
+        for next_state, next_state_probability in dict(robot.observation_model(current_state)).items():
+            B[index, all_possible_observed_states.index(next_state)] = next_state_probability
+    
     num_time_steps = len(observations)
+    # define node potentials
+    phi = [None] * num_time_steps
+    psi = [None] * (num_time_steps - 1)
+    # compute node potentials
+    # first potential
+    # important: here we go into the log-domain
+    for i, o in enumerate(observations[:1]):
+        if o == None:
+            fm = robot.Distribution(dict(zip(all_possible_hidden_states, [-np.log2(prior_distribution[state]*1) for j, state in enumerate(all_possible_hidden_states)])))
+        else:
+            fm = robot.Distribution(dict(zip(all_possible_hidden_states, [-np.log2(prior_distribution[state]*B[j, all_possible_observed_states.index(o)]) for j, state in enumerate(all_possible_hidden_states)])))
+        fm.renormalize()
+        phi[i] = fm
+    #next potentials
+    for i, o in enumerate(observations[1:]):
+        if o == None:
+            fm = robot.Distribution(dict(zip(all_possible_hidden_states, [-np.log2(1) for j, state in enumerate(all_possible_hidden_states)])))
+        else:
+            fm = robot.Distribution(dict(zip(all_possible_hidden_states, [B[j, all_possible_observed_states.index(o)] for j, state in enumerate(all_possible_hidden_states)])))
+        fm.renormalize()
+        phi[i + 1] = fm
+    #transition probabilities
+    
+    
+    messages = [None] * num_time_steps    
+    
     estimated_hidden_states = [None] * num_time_steps # remove this
 
     return estimated_hidden_states

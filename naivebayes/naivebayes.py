@@ -113,7 +113,11 @@ def classify_email(email_filename,
     """
     ### TODO: Comment out the following line and write your code here
     #return 'spam'
+    n_ratio = 0
+    email_words_list = list(set(util.get_words_in_file(email_filename)))
+    n_ratio = log_prior_by_category[0] - log_prior_by_category[1] + np.sum(log_probabilities_by_category[0][w] for w in email_words_list) + np.sum(log_probabilities_by_category[0][w] for w in set(log_probabilities_by_category[0].keys()) if w not in set(mail_words_list)) - np.sum(log_probabilities_by_category[1][w] for w in email_words_list) - np.sum(log_probabilities_by_category[1][w] for w in set(log_probabilities_by_category[1].keys()) if w not in set(mail_words_list))
 
+    return 'spam' if n_ratio >=0 else 'ham'
 
 def classify_emails(spam_files, ham_files, test_files):
     # DO NOT MODIFY -- used by the autograder

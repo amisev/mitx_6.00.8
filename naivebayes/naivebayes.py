@@ -58,8 +58,9 @@ def get_log_probabilities(file_list):
     words_number = len(words_counts)
 
     c = Counter()
-    c = defaultdict(lambda: 1)
-    c = {k: np.log((v + 1)/(files_number + words_number + 1)) for k, v in words_counts.items()}
+    c = defaultdict(lambda: np.loge(1/(files_number + words_number + 1)))
+    d = {k: np.log((v + 1)/(files_number + words_number + 1)) for k, v in words_counts.items()}
+    c.update(d)
     return c
 
 def learn_distributions(file_lists_by_category):
@@ -111,7 +112,8 @@ def classify_email(email_filename,
     One of the labels in names.
     """
     ### TODO: Comment out the following line and write your code here
-    return 'spam'
+    #return 'spam'
+
 
 def classify_emails(spam_files, ham_files, test_files):
     # DO NOT MODIFY -- used by the autograder

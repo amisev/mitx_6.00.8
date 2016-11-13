@@ -4,6 +4,9 @@ import numpy as np
 
 import util
 
+from collections import Counter
+from collections import defaultdict
+
 USAGE = "%s <test data folder> <spam folder> <ham folder>"
 
 def get_counts(file_list):
@@ -12,7 +15,7 @@ def get_counts(file_list):
 
     Inputs
     ------
-    file_list : a list of filenames, suitable for use with open() or 
+    file_list : a list of filenames, suitable for use with open() or
                 util.get_words_in_file()
 
     Output
@@ -21,16 +24,21 @@ def get_counts(file_list):
     key occurred in.
     """
     ### TODO: Comment out the following line and write your code here
-    raise NotImplementedError
+    #raise NotImplementedError
+    c = Counter()
+    for file_name in file_list:
+        c = c + Counter(dict.fromkeys(set(util.get_words_in_file(file_name)), 1))
+    return dict(c)
+
 
 def get_log_probabilities(file_list):
     """
-    Computes log-frequencies for each word that occurs in the files in 
+    Computes log-frequencies for each word that occurs in the files in
     file_list.
 
     Input
     -----
-    file_list : a list of filenames, suitable for use with open() or 
+    file_list : a list of filenames, suitable for use with open() or
                 util.get_words_in_file()
 
     Output
@@ -44,14 +52,21 @@ def get_log_probabilities(file_list):
     get_counts() helper above.
     """
     ### TODO: Comment out the following line and write your code here
-    raise NotImplementedError
+    #raise NotImplementedError
+    words_counts = get_counts(file_list)
+    files_number = len(file_list)
+    words_number = len(words_counts)
 
+    c = Counter()
+    c = defaultdict(lambda: 1)
+    c = {k: np.log((v + 1)/(files_number + words_number + 1)) for k, v in words_counts.items()}
+    return c
 
 def learn_distributions(file_lists_by_category):
     """
     Input
     -----
-    A two-element list. The first element is a list of spam files, 
+    A two-element list. The first element is a list of spam files,
     and the second element is a list of ham (non-spam) files.
 
     Output
@@ -68,7 +83,14 @@ def learn_distributions(file_lists_by_category):
                             [est. for log P(c=spam), est. for log P(c=ham)]
     """
     ### TODO: Comment out the following line and write your code here
-    raise NotImplementedError
+    #raise NotImplementedError
+    #initialize spam/ham counters
+    n_spam = len(file_lists_by_category[0])
+    n_ham = len(file_lists_by_category[1])
+    #
+    log_probability_spam = get_log_probabilities(file_lists_by_category[0])
+    log_probability_ham = get_log_probabilities(file_lists_by_category[1])
+    return ([log_probability_spam, log_probability_ham], [np.log(n_spam/(n_spam+n_ham)), np.log(n_ham/(n_spam+n_ham))])
 
 def classify_email(email_filename,
                    log_probabilities_by_category,

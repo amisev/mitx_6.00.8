@@ -115,7 +115,7 @@ def classify_email(email_filename,
     #return 'spam'
     n_ratio = 0
     email_words_list = list(set(util.get_words_in_file(email_filename)))
-    n_ratio = log_prior_by_category[0] - log_prior_by_category[1] + np.sum(log_probabilities_by_category[0][w] for w in email_words_list) + np.sum((1 - log_probabilities_by_category[0][w]) for w in set(log_probabilities_by_category[0].keys()) if w not in set(email_words_list)) - np.sum(log_probabilities_by_category[1][w] for w in email_words_list) - np.sum((1 - log_probabilities_by_category[1][w]) for w in set(log_probabilities_by_category[1].keys()) if w not in set(email_words_list))
+    n_ratio = log_prior_by_category[0] - log_prior_by_category[1] + np.sum(log_probabilities_by_category[0][w] for w in email_words_list) + np.sum(np.log(1 - np.exp(log_probabilities_by_category[0][w])) for w in set(log_probabilities_by_category[0].keys()) if w not in set(email_words_list)) - np.sum(log_probabilities_by_category[1][w] for w in email_words_list) - np.sum(np.log(1 - np.exp(log_probabilities_by_category[1][w])) for w in set(log_probabilities_by_category[1].keys()) if w not in set(email_words_list))
 
     return 'spam' if n_ratio >=0 else 'ham'
 

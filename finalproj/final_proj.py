@@ -113,7 +113,22 @@ def compute_empirical_distribution(values):
     # -------------------------------------------------------------------------
     # YOUR CODE HERE
     #
+    d = Counter()
+    d = defaultdict(lambda: 0)
 
+    values = np.array(values)
+    # in case of 1d array
+    if len(values.shape) == 1:
+        d = Counter([tuple([value]) for value in values])
+    # in other cases
+    else:
+        d = Counter([tuple(value) for value in values])
+
+    s = sum(d.values())
+    for k in d:
+        d[k] = d[k]*1/s
+
+    distribution = d
     #
     # END OF YOUR CODE
     # -------------------------------------------------------------------------
@@ -141,8 +156,15 @@ def compute_empirical_mutual_info_nats(var1_values, var2_values):
     # -------------------------------------------------------------------------
     # YOUR CODE HERE
     #
+    p1 = compute_empirical_distribution(var1_values)
+    p2 = compute_empirical_distribution(var2_values)
+    p12 = compute_empirical_distribution(np.vstack((var1_values, var2_values)).T)
 
     empirical_mutual_info_nats = 0.0
+
+    for k1 in p1:
+        for k2 in p2:
+            empirical_mutual_info_nats += p12((k1[0], k2[0]))*np.log2(p12((k1[0], k2[0]))/(p1(k1)*p2(k2)))
 
     #
     # END OF YOUR CODE

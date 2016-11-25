@@ -255,6 +255,14 @@ def compute_empirical_conditional_distribution(var1_values, var2_values):
     # YOUR CODE HERE
     #
 
+    p1 = compute_empirical_distribution(var1_values)
+    p2 = compute_empirical_distribution(var2_values)
+    p12 = compute_empirical_distribution(np.vstack((var1_values, var2_values)).T)
+
+    for k2 in p2:
+        for k1 in p1:
+            if p2[k2] > 0:
+                conditional_distributions[k2][k1] = p12[(k1, k2)]/p2[k2]
     #
     # END OF YOUR CODE
     # -------------------------------------------------------------------------

@@ -122,7 +122,9 @@ def compute_empirical_distribution(values):
     values = np.array(values)
     # in case of 1d array
     if len(values.shape) == 1:
-        d = Counter([tuple([value]) for value in values])
+        # d = Counter([tuple([value]) for value in values])
+        d = Counter([value for value in values])
+
     # in other cases
     else:
         d = Counter([tuple(value) for value in values])

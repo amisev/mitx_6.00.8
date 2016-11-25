@@ -1,6 +1,9 @@
 import copy
 import numpy as np
 
+from collections import defaultdict
+from collections import Counter
+
 
 # DO NOT MODIFY THIS FUNCTION
 def convert_tree_as_set_to_adjacencies(tree):
@@ -202,6 +205,22 @@ def chow_liu(observations):
     # YOUR CODE HERE
     #
 
+    # define matrix to hold mutual cross information between vertices
+    A = np.zeros(shape=(num_vars, num_vars))
+    # compute mutual information between vertices
+    for index, value in np.ndenumerate(A):
+        if index[0] < index[1]:
+            A[index] = compute_empirical_mutual_info_nats(observations[:, index[0]], observations[:, index[1]])
+    # iterate over matrix A while graph whill be fully connected
+    connected = False
+    while not connected:
+        index = np.unravel_index(A.flatten().argmax(), (A.shape))
+        A[index] = 0
+        if union_find.find(index[0]) != union_find.find(index[1]):
+            union_find.union(index[0], index[1])
+            best_tree.add(index)
+        else:
+            connected = True
     #
     # END OF YOUR CODE
     # -------------------------------------------------------------------------

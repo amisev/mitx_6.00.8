@@ -141,45 +141,56 @@ def Viterbi(observations):
     # -------------------------------------------------------------------------
     # YOUR CODE GOES HERE
     #
-    # define transition matrix    
-    A = np.zeros((len(all_possible_hidden_states), len(all_possible_hidden_states)))    
+    # define transition matrix
+    A = np.zeros((len(all_possible_hidden_states), len(all_possible_hidden_states)))
     for index, current_state in enumerate(all_possible_hidden_states):
         for next_state, next_state_probability in dict(robot.transition_model(current_state)).items():
-            A[index, all_possible_hidden_states.index(next_state)] = next_state_probability    
-    # define observation matrix    
-    B = np.zeros((len(all_possible_hidden_states), len(all_possible_observed_states)))    
+            A[index, all_possible_hidden_states.index(next_state)] = next_state_probability
+    # define observation matrix
+    B = np.zeros((len(all_possible_hidden_states), len(all_possible_observed_states)))
     for index, current_state in enumerate(all_possible_hidden_states):
         for next_state, next_state_probability in dict(robot.observation_model(current_state)).items():
             B[index, all_possible_observed_states.index(next_state)] = next_state_probability
-    
+
     num_time_steps = len(observations)
     # define node potentials
-    phi = [None] * num_time_steps
-    psi = [None] * (num_time_steps - 1)
-    # compute node potentials
-    # first potential
-    # important: here we go into the log-domain
+    phi = np.zeros((len(all_possible_hidden_states), num_time_steps))
+    n_prior_distribution = np.array([prior_distribution[state] for state in all_possible_hidden_states])
     for i, o in enumerate(observations[:1]):
         if o == None:
-            fm = robot.Distribution(dict(zip(all_possible_hidden_states, [-np.log2(prior_distribution[state]*1) for j, state in enumerate(all_possible_hidden_states)])))
+            phi[:, i] = -1*np.log2(n_prior_distribution[:, None].T)
         else:
-            fm = robot.Distribution(dict(zip(all_possible_hidden_states, [-np.log2(prior_distribution[state]*B[j, all_possible_observed_states.index(o)]) for j, state in enumerate(all_possible_hidden_states)])))
-        fm.renormalize()
-        phi[i] = fm
+            phi[:, i] = -1*np.log2(np.multiply(n_prior_distribution, B[:, 0])[:, None].T)
     #next potentials
     for i, o in enumerate(observations[1:]):
         if o == None:
-            fm = robot.Distribution(dict(zip(all_possible_hidden_states, [-np.log2(1) for j, state in enumerate(all_possible_hidden_states)])))
+            phi[:, i + 1] = -1*np.log2(np.ones(phi.shape[0])[:, None].T)
         else:
-            fm = robot.Distribution(dict(zip(all_possible_hidden_states, [B[j, all_possible_observed_states.index(o)] for j, state in enumerate(all_possible_hidden_states)])))
-        fm.renormalize()
-        phi[i + 1] = fm
-    #transition probabilities
-    
-    
-    messages = [None] * num_time_steps    
-    
+            phi[:, i + 1] = -1*np.log2(B[:, all_possible_observed_states.index(o)])
+
+    psi = np.zeros((len(all_possible_hidden_states), len(all_possible_hidden_states)))
+    psi[:, :] = -1*np.log2(A)
+
+    #compute messages&traceback messages
+    messages = np.zeros((len(all_possible_hidden_states), num_time_steps))
+    traceback_messages = np.zeros((len(all_possible_hidden_states), num_time_steps))
+
+    for i, o in enumerate(observations[:1]):
+        messages[:, i] = [np.min(phi[:, i] + psi[:, j].T) for j, state in enumerate(all_possible_hidden_states)]
+        traceback_messages[:, i] = [np.argmin(phi[:, i] + psi[:, j].T) for j, state in enumerate(all_possible_hidden_states)]
+    for i, o in enumerate(observations[1:-1]):
+        messages[:, i + 1] = [np.min(phi[:, i + 1] + psi[:, j].T + messages[:, i]) for j, state in enumerate(all_possible_hidden_states)]
+        traceback_messages[:, i + 1] = [np.argmin(phi[:, i + 1] + psi[:, j].T + messages[:, i]) for j, state in enumerate(all_possible_hidden_states)]
+
+    last_state = np.argmin(phi[:, -1] + messages[:, -1])
+
     estimated_hidden_states = [None] * num_time_steps # remove this
+
+    estimated_hidden_states[num_time_steps-1] = all_possible_hidden_states[last_state]
+    for i in np.arange(num_time_steps - 1, 0, -1):
+        print(last_state)
+        print(traceback_messages[all_possible_hidden_states.index(estimated_hidden_states[i]), i-1])
+        estimated_hidden_states[i-1] = all_possible_hidden_states[int(traceback_messages[all_possible_hidden_states.index(estimated_hidden_states[i]), i-1])]
 
     return estimated_hidden_states
 

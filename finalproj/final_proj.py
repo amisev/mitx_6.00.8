@@ -538,10 +538,9 @@ def compute_marginals_given_observations(nodes, edges, node_potentials,
     # -------------------------------------------------------------------------
     # YOUR CODE HERE
     #
-
-    node_potentials[root_node] = compute_empirical_distribution(observations[:, root_node])
-    for node in nodes - set([root_node]):
-        node_potentials[node] = dict.fromkeys(set(observations[:, node]), 1)
+    new_node_potentials = copy.copy(node_potentials)
+    for k in observations:
+        new_node_potentials[k] = {observations[k]: 1}
     #
     # END OF YOUR CODE
     # -------------------------------------------------------------------------

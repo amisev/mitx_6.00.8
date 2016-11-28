@@ -117,7 +117,7 @@ def compute_empirical_distribution(values):
     # YOUR CODE HERE
     #
     d = Counter()
-    d = defaultdict(lambda: 0)
+    # d = defaultdict(lambda: 0)
 
     values = np.array(values)
     # in case of 1d array
@@ -220,7 +220,7 @@ def chow_liu(observations):
         A[index] = 0
         if union_find.find(index[0]) != union_find.find(index[1]):
             union_find.union(index[0], index[1])
-            best_tree.add(index)
+            best_tree.add((np.int(index[0]), np.int(index[1])))
         else:
             connected = True
     #
@@ -350,6 +350,24 @@ def learn_tree_parameters(observations, tree, root_node=0):
     # YOUR CODE HERE
     #
 
+    # compute node potentials
+    node_potentials[root_node] = compute_empirical_distribution(observations[:, root_node])
+    for node in nodes - set([root_node]):
+        node_potentials[node] = dict.fromkeys(set(observations[:, node]), 1)
+    # compute edge potentials
+    fringe = [root_node]
+    visited = {node: False for node in nodes}
+    # lets walk over tree
+    while len(fringe) > 0:
+        node = fringe.pop(0)
+        visited[node] = True
+        for neighbor in edges[node]:
+            if not visited[neighbor]:
+                if not edge_potentials.get((node, neighbor)):
+                    edge_potentials[(node, neighbor)] = compute_empirical_conditional_distribution(observations[:, neighbor], observations[:, node])
+                if not edge_potentials.get((neighbor, node)):
+                    edge_potentials[(neighbor, node)] = transpose_2d_table(edge_potentials[(node, neighbor)])
+                fringe.append(neighbor)
     #
     # END OF YOUR CODE
     # -------------------------------------------------------------------------
@@ -401,6 +419,19 @@ def sum_product(nodes, edges, node_potentials, edge_potentials):
     # -------------------------------------------------------------------------
     # YOUR CODE HERE
     #
+
+    # first we are going to walk over tree to store messages in order from leafes to
+    # root
+    def m(i, j):
+        if (i, j) not in messages:
+            messages[(i, j)] = {k: np.sum([node_potentials[i][l]*edge_potentials[(i, j)][l][k]*np.prod([m(o, i)[l] for o in set(edges[i]) - set([j])]) for l in node_potentials[i]]) for k in node_potentials[j]}
+        return messages[(i, j)]
+
+    for i in nodes:
+        marginals[i] = {k: node_potentials[i][k]*np.prod([m(l, i)[k] for l in set(edges[i])]) for k in node_potentials[i]}
+        s = sum(marginals[i].values())
+        for k in marginals[i]:
+            marginals[i][k] = marginals[i][k]*1/s
 
     #
     # END OF YOUR CODE
@@ -508,6 +539,9 @@ def compute_marginals_given_observations(nodes, edges, node_potentials,
     # YOUR CODE HERE
     #
 
+    node_potentials[root_node] = compute_empirical_distribution(observations[:, root_node])
+    for node in nodes - set([root_node]):
+        node_potentials[node] = dict.fromkeys(set(observations[:, node]), 1)
     #
     # END OF YOUR CODE
     # -------------------------------------------------------------------------

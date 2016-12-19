@@ -5,6 +5,7 @@ from collections import defaultdict
 from collections import Counter
 
 
+#
 # DO NOT MODIFY THIS FUNCTION
 def convert_tree_as_set_to_adjacencies(tree):
     """

@@ -75,9 +75,9 @@ def forward_backward(observations):
     num_time_steps = len(observations)
     forward_messages = [None] * num_time_steps
     forward_messages[0] = [prior_distribution]
-    # TODO: Compute the forward messages
+    # Compute the forward messages
     for i, o in enumerate(observations[:-1]):
-            if o == None:
+            if o is None:
                 fm = robot.Distribution(dict(zip(all_possible_hidden_states, np.sum([forward_messages[i][0][state]*1*A[j, :].T for j, state in enumerate(all_possible_hidden_states)], axis=0))))
             else:
                 fm = robot.Distribution(dict(zip(all_possible_hidden_states, np.sum([forward_messages[i][0][state]*B[j, all_possible_observed_states.index(o)]*A[j, :].T for j, state in enumerate(all_possible_hidden_states)], axis=0))))
@@ -85,11 +85,11 @@ def forward_backward(observations):
             forward_messages[i+1] = [fm]
 
     backward_messages = [None] * num_time_steps
-    # TODO: Compute the backward messages
+    # Compute the backward messages
     # first backward message
     # backward messages are indexed from 0 to num_time_steps-1
     for i, o in enumerate(observations[::-1][:1]):
-            if o == None:
+            if o is None:
                 fm = robot.Distribution(dict(zip(all_possible_hidden_states, np.sum([A[:, j] for j, state in enumerate(all_possible_hidden_states)], axis=0))))
             else:
                 fm = robot.Distribution(dict(zip(all_possible_hidden_states, np.sum([B[j, all_possible_observed_states.index(o)]*A[:, j] for j, state in enumerate(all_possible_hidden_states)], axis=0))))
@@ -97,17 +97,17 @@ def forward_backward(observations):
             backward_messages[num_time_steps - i - 1] = [fm]
     # next backward messages
     for i, o in enumerate(observations[::-1][1:-1]):
-            if o == None:
+            if o is None:
                 fm = robot.Distribution(dict(zip(all_possible_hidden_states, np.sum([backward_messages[num_time_steps - i - 1][0][state]*1*A[:, j] for j, state in enumerate(all_possible_hidden_states)], axis=0))))
             else:
                 fm = robot.Distribution(dict(zip(all_possible_hidden_states, np.sum([backward_messages[num_time_steps - i - 1][0][state]*B[j, all_possible_observed_states.index(o)]*A[:, j] for j, state in enumerate(all_possible_hidden_states)], axis=0))))
             fm.renormalize()
             backward_messages[num_time_steps - i - 2] = [fm]
 
-    marginals = [None] * num_time_steps # remove this
-    # TODO: Compute the marginals
+    marginals = [None] * num_time_steps  # remove this
+    # Compute the marginals
     for i, o in enumerate(observations[:-1]):
-            if o == None:
+            if o is None:
                 fm = robot.Distribution(dict(zip(all_possible_hidden_states, [forward_messages[i][0][state]*backward_messages[i+1][0][state]*1 for j, state in enumerate(all_possible_hidden_states)])))
             else:
                 fm = robot.Distribution(dict(zip(all_possible_hidden_states, [forward_messages[i][0][state]*backward_messages[i+1][0][state]*B[j, all_possible_observed_states.index(o)] for j, state in enumerate(all_possible_hidden_states)])))
@@ -115,7 +115,7 @@ def forward_backward(observations):
             marginals[i] = fm
     # in last marginal we exclude backward part
     for i, o in enumerate(observations[-1:]):
-            if o == None:
+            if o is None:
                 fm = robot.Distribution(dict(zip(all_possible_hidden_states, [forward_messages[num_time_steps - 1][0][state]*1 for j, state in enumerate(all_possible_hidden_states)])))
             else:
                 fm = robot.Distribution(dict(zip(all_possible_hidden_states, [forward_messages[num_time_steps - 1][0][state]*B[j, all_possible_observed_states.index(o)] for j, state in enumerate(all_possible_hidden_states)])))
@@ -157,13 +157,13 @@ def Viterbi(observations):
     phi = np.zeros((len(all_possible_hidden_states), num_time_steps))
     n_prior_distribution = np.array([prior_distribution[state] for state in all_possible_hidden_states])
     for i, o in enumerate(observations[:1]):
-        if o == None:
+        if o is None:
             phi[:, i] = -1*np.log2(n_prior_distribution[:, None].T)
         else:
             phi[:, i] = -1*np.log2(np.multiply(n_prior_distribution, B[:, 0])[:, None].T)
-    #next potentials
-    for i, o in enumerate(observations[1:]):
-        if o == None:
+            #  transition probabilities
+    for i, o in enumerate(observations[1:-1]):
+        if o is None:
             phi[:, i + 1] = -1*np.log2(np.ones(phi.shape[0])[:, None].T)
         else:
             phi[:, i + 1] = -1*np.log2(B[:, all_possible_observed_states.index(o)])
@@ -171,7 +171,7 @@ def Viterbi(observations):
     psi = np.zeros((len(all_possible_hidden_states), len(all_possible_hidden_states)))
     psi[:, :] = -1*np.log2(A)
 
-    #compute messages&traceback messages
+    # compute messages&traceback messages
     messages = np.zeros((len(all_possible_hidden_states), num_time_steps))
     traceback_messages = np.zeros((len(all_possible_hidden_states), num_time_steps))
 
@@ -183,13 +183,13 @@ def Viterbi(observations):
         traceback_messages[:, i + 1] = [np.argmin(phi[:, i + 1] + psi[:, j].T + messages[:, i]) for j, state in enumerate(all_possible_hidden_states)]
 
     last_state = np.argmin(phi[:, -1] + messages[:, -1])
-
-    estimated_hidden_states = [None] * num_time_steps # remove this
+    print(last_state)
+    estimated_hidden_states = [None] * num_time_steps  # remove this
 
     estimated_hidden_states[num_time_steps-1] = all_possible_hidden_states[last_state]
     for i in np.arange(num_time_steps - 1, 0, -1):
-        print(last_state)
-        print(traceback_messages[all_possible_hidden_states.index(estimated_hidden_states[i]), i-1])
+        # print(last_state)
+        # print(traceback_messages[all_possible_hidden_states.index(estimated_hidden_states[i]), i-1])
         estimated_hidden_states[i-1] = all_possible_hidden_states[int(traceback_messages[all_possible_hidden_states.index(estimated_hidden_states[i]), i-1])]
 
     return estimated_hidden_states
@@ -212,9 +212,8 @@ def second_best(observations):
     # YOUR CODE GOES HERE
     #
 
-
     num_time_steps = len(observations)
-    estimated_hidden_states = [None] * num_time_steps # remove this
+    estimated_hidden_states = [None] * num_time_steps  # remove this
 
     return estimated_hidden_states
 

@@ -1,3 +1,4 @@
+# students please paste your movie_recommendations.py code here
 #!/usr/bin/env python
 """
 movie_recommendations.py
@@ -22,7 +23,8 @@ from sys import exit
 def compute_posterior(prior, likelihood, y):
     """
     Use Bayes' rule for random variables to compute the posterior distribution
-    of a hidden variable X, given N i.i.d. observations Y_0, Y_1, ..., Y_{N-1}.
+    of a hidden variable X, given N observations Y_0, Y_1, ..., Y_{N-1}.
+    Conditioned on X, these observations Y_0, Y_1, ..., Y_{N-1} are i.i.d.
 
     Hidden random variable X is assumed to take on a value in {0, 1, ..., M-1}.
 
@@ -84,9 +86,8 @@ def compute_posterior(prior, likelihood, y):
     # value). You need to go to log-domain. Hint: this next line is a good
     # first step.
     log_prior = np.log(prior)
-    log_relative_probability = np.sum(np.log(likelihood[y, :]), axis=0) + log_prior
-
-    log_answer = log_relative_probability - scipy.misc.logsumexp(log_relative_probability)
+    log_enumerator = np.log(likelihood[y,:]).sum(axis=0) + log_prior
+    log_answer = [log_enumerator - scipy.misc.logsumexp(log_enumerator)]
     #
     # END OF YOUR CODE FOR PART (b)
     # -------------------------------------------------------------------------
@@ -121,7 +122,10 @@ def compute_movie_rating_likelihood(M):
     # Remember to normalize the likelihood, so that each column is a
     # probability distribution.
     #
-
+    likelihood = np.fromfunction(lambda i, j: 1./np.abs(i - j), (M, M))
+    np.fill_diagonal( likelihood, 2)
+    #normalize:
+    likelihood = likelihood/likelihood.sum(axis=0)
     #
     # END OF YOUR CODE FOR PART (c)
     # -------------------------------------------------------------------------
@@ -180,6 +184,15 @@ def infer_true_movie_ratings(num_observations=-1):
     posteriors = np.zeros((num_movies, M))
     MAP_ratings = np.zeros(num_movies)
 
+    for i, movie_id in enumerate(movie_id_list):
+        #movie_ratings = np.zeros(num_observations)
+        if num_observations == -1:
+            movie_ratings = movie_data_helper.get_ratings(movie_id)
+        else:
+            movie_ratings = movie_data_helper.get_ratings(movie_id)[:num_observations]
+
+        posteriors[i] = compute_posterior(prior, likelihood, movie_ratings)
+        MAP_ratings[i] = posteriors[i].argmax()
     #
     # END OF YOUR CODE FOR PART (d)
     # -------------------------------------------------------------------------
@@ -215,7 +228,7 @@ def compute_entropy(distribution):
     # Be sure to:
     # - use log base 2
     # - enforce 0log0 = 0
-
+    entropy = np.sum(d*np.log2(1/d) if d != 0 else 0 for d in distribution)
     #
     # END OF YOUR CODE FOR PART (f)
     # -------------------------------------------------------------------------
@@ -247,7 +260,8 @@ def compute_true_movie_rating_posterior_entropies(num_observations):
     # YOUR CODE GOES HERE FOR PART (g)
     #
     # Make use of the compute_entropy function you coded in part (f).
-
+    posteriors, MAP_ratings = infer_true_movie_ratings(num_observations)
+    posterior_entropies = np.apply_along_axis(compute_entropy, axis=1, arr=posteriors)
     #
     # END OF YOUR CODE FOR PART (g)
     # -------------------------------------------------------------------------
@@ -273,6 +287,7 @@ def main():
     print(compute_posterior(prior, likelihood, y))
     print("Expected answer:")
     print(np.array([[0.91986917, 0.08013083]]))
+
 
     print("---")
     print("Entropy of fair coin flip")
@@ -307,6 +322,7 @@ def main():
     # Place your code that calls the relevant functions here.  Make sure it's
     # easy for us graders to run your code. You may want to define multiple
     # functions for each of the parts of this problem, and call them here.
+
 
     #
     # END OF YOUR CODE FOR TESTING

@@ -276,15 +276,14 @@ def second_best(observations):
         #
         second_best_path_current = phi[best_state_previous, i + 1] + psi[best_state_previous, best_state_current] + path[best_state_previous, i, 1]
         second_best_path_candidate = phi[:, i + 1] + psi[:, best_state_current] + path[:, i, 0]
-        print(second_best_path_current)
-        # print(second_best_path_candidate[second_best_path_candidate.argsort()[-2:][0]])
         #
-        if second_best_path_candidate[second_best_path_candidate.argsort()[-2:][0]] < second_best_path_current:
-            path[best_state_current, i + 1, 1] = second_best_path_candidate[second_best_path_candidate.argsort()[-2:][0]]
+        if second_best_path_candidate[second_best_path_candidate.argsort()[:2][1]] < second_best_path_current:
+            path[best_state_current, i + 1, 1] = second_best_path_candidate[second_best_path_candidate.argsort()[:2][1]]
             # store time, then merge happend
             time_merge_happend = i + 1
+            # print('time merged happend: ', time_merge_happend)
             # store state, with second best path
-            state_merge_happend = second_best_path_candidate.argsort()[-2:][0]
+            state_merge_happend = second_best_path_candidate.argsort()[:2][1]
         else:
             path[best_state_current, i + 1, 1] = second_best_path_current
 

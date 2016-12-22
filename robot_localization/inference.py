@@ -167,18 +167,16 @@ def Viterbi(observations):
         else:
             phi[:, i + 1] = -1*np.log2(B[:, all_possible_observed_states.index(o)])
 
-    # psi = np.zeros((len(all_possible_hidden_states), len(all_possible_hidden_states)))
-    # psi[:, :] = -1*np.log2(A)
     psi = -1*np.log2(A)
 
     messages = np.zeros((len(all_possible_hidden_states), num_time_steps - 1))
     traceback_messages = np.zeros((len(all_possible_hidden_states), num_time_steps - 1))
 
-    messages[:, 0] = [np.min(phi[:, 0] + psi[:, j].T) for j, state in enumerate(all_possible_hidden_states)]
-    traceback_messages[:, 0] = [np.argmin(phi[:, 0] + psi[:, j].T) for j, state in enumerate(all_possible_hidden_states)]
-    for time_stamp in np.arange(0, num_time_steps - 2):
-        messages[:, time_stamp + 1] = [np.min(phi[:, time_stamp + 1] + psi[:, j].T + messages[:, time_stamp]) for j, state in enumerate(all_possible_hidden_states)]
-        traceback_messages[:, time_stamp + 1] = [np.argmin(phi[:, time_stamp + 1] + psi[:, j].T + messages[:, time_stamp]) for j, state in enumerate(all_possible_hidden_states)]
+    messages[:, 0] = [np.min(phi[:, 0] + psi[:, j]) for j, state in enumerate(all_possible_hidden_states)]
+    traceback_messages[:, 0] = [np.argmin(phi[:, 0] + psi[:, j]) for j, state in enumerate(all_possible_hidden_states)]
+    for time_stamp in np.arange(num_time_steps - 2):
+        messages[:, time_stamp + 1] = [np.min(phi[:, time_stamp + 1] + psi[:, j] + messages[:, time_stamp]) for j, state in enumerate(all_possible_hidden_states)]
+        traceback_messages[:, time_stamp + 1] = [np.argmin(phi[:, time_stamp + 1] + psi[:, j] + messages[:, time_stamp]) for j, state in enumerate(all_possible_hidden_states)]
 
     last_state = np.argmin(phi[:, -1] + messages[:, -1])
 
@@ -204,8 +202,8 @@ def second_best(observations):
     (<x>, <y>, <action>)
     """
 
-    # -------------------------------------------------------------------------
-    # YOUR CODE GOES HERE
+    #
+    # serial LVA implementaition
     #
 
     # define transition matrix
@@ -234,12 +232,7 @@ def second_best(observations):
         else:
             phi[:, i + 1] = -1*np.log2(B[:, all_possible_observed_states.index(o)])
 
-    psi = np.zeros((len(all_possible_hidden_states), len(all_possible_hidden_states)))
-    psi[:, :] = -1*np.log2(A)
-
-    #
-    # serial LVA implementaition
-    #
+    psi = -1*np.log2(A)
 
     # k most likely paths
     k = 2
@@ -249,12 +242,12 @@ def second_best(observations):
     #
     path = np.zeros((len(all_possible_hidden_states), num_time_steps - 1, k))
     #
-    messages[:, 0] = [np.min(phi[:, 0] + psi[:, j].T) for j, state in enumerate(all_possible_hidden_states)]
-    traceback_messages[:, 0] = [np.argmin(phi[:, 0] + psi[:, j].T) for j, state in enumerate(all_possible_hidden_states)]
+    messages[:, 0] = [np.min(phi[:, 0] + psi[:, j]) for j, state in enumerate(all_possible_hidden_states)]
+    traceback_messages[:, 0] = [np.argmin(phi[:, 0] + psi[:, j]) for j, state in enumerate(all_possible_hidden_states)]
     path[:, 0, 0] = messages[:, 0]
     for time_stamp in np.arange(0, num_time_steps - 2):
-        messages[:, time_stamp + 1] = [np.min(phi[:, time_stamp + 1] + psi[:, j].T + messages[:, time_stamp]) for j, state in enumerate(all_possible_hidden_states)]
-        traceback_messages[:, time_stamp + 1] = [np.argmin(phi[:, time_stamp + 1] + psi[:, j].T + messages[:, time_stamp]) for j, state in enumerate(all_possible_hidden_states)]
+        messages[:, time_stamp + 1] = [np.min(phi[:, time_stamp + 1] + psi[:, j] + messages[:, time_stamp]) for j, state in enumerate(all_possible_hidden_states)]
+        traceback_messages[:, time_stamp + 1] = [np.argmin(phi[:, time_stamp + 1] + psi[:, j] + messages[:, time_stamp]) for j, state in enumerate(all_possible_hidden_states)]
         path[:, time_stamp + 1, 0] = messages[:, time_stamp + 1]
 
     last_state = np.argmin(phi[:, -1] + messages[:, -1])
@@ -265,31 +258,33 @@ def second_best(observations):
     for time_stamp in np.arange(num_time_steps - 1, 0, -1):
         estimated_hidden_states_1[time_stamp - 1] = all_possible_hidden_states[int(traceback_messages[all_possible_hidden_states.index(estimated_hidden_states_1[time_stamp]), time_stamp - 1])]
 
-    # find k-th best path
-    # merge count array
-    # M = np.ones(num_time_steps)
-    #
+    # here we find second best path
+    # time, then second best path will merge with first best path
     time_merge_happend = 0
+    # state, predecessor of current state
     state_merge_happend = all_possible_hidden_states[0]
-
+    # minimal cost of second best path
     second_best_path_candidate_min = np.inf
-    best_state_last = all_possible_hidden_states.index(estimated_hidden_states_1[num_time_steps - 1])
-
+    # last state of first best path, to make comparisons with second best path
+    best_state_last = all_possible_hidden_states.index(estimated_hidden_states_1[-1])
+    # initialize second best path
     path[:, 0, 1] = path[:, 0, 0]
     for time_stamp in np.arange(num_time_steps - 2):
+        # here we hold t + 1, t best states
+        # best_state_next = all_possible_hidden_states.index(estimated_hidden_states_1[time_stamp + 2])
         best_state_current = all_possible_hidden_states.index(estimated_hidden_states_1[time_stamp + 1])
         best_state_previous = all_possible_hidden_states.index(estimated_hidden_states_1[time_stamp + 0])
         #
-        second_best_path_current = phi[best_state_previous, time_stamp + 1] + psi[best_state_previous, best_state_current] + path[best_state_previous, time_stamp, 1]
-        second_best_path_candidate = phi[:, time_stamp] + psi[:, best_state_current] + path[:, time_stamp, 0]
-        #
+        second_best_path_current = phi[best_state_previous, time_stamp] + psi[best_state_previous, best_state_current] + path[best_state_previous, time_stamp, 1]
+        second_best_path_candidate = phi[:, time_stamp + 1] + psi[:, best_state_current] + path[:, time_stamp, 0]
+        # compare second best path candidate cost with first best path cost
+        # (from begining to current state)
         if second_best_path_candidate[second_best_path_candidate.argsort()[:2][1]] < second_best_path_current:
+            #
             path[best_state_current, time_stamp + 1, 1] = second_best_path_candidate[second_best_path_candidate.argsort()[:2][1]]
-            # compare second best path candidate cost with global minimum
-            # print(time_stamp + 1)
-            # print(second_best_path_candidate[second_best_path_candidate.argsort()[:2][1]] + path[best_state_last, num_time_steps - 2, 0] - path[best_state_current, time_stamp, 0], path[best_state_last, num_time_steps - 2, 0])
+            #
             if second_best_path_candidate[second_best_path_candidate.argsort()[:2][1]] + path[best_state_last, -1, 0] - path[best_state_current, time_stamp, 0] < second_best_path_candidate_min:
-                second_best_path_candidate_min = second_best_path_candidate[second_best_path_candidate.argsort()[:2][1]] + (path[best_state_last, -1, 0] - path[best_state_current, time_stamp, 0])
+                second_best_path_candidate_min = second_best_path_candidate[second_best_path_candidate.argsort()[:2][1]] + path[best_state_last, -1, 0] - path[best_state_current, time_stamp, 0]
                 # store time, then merge happend
                 time_merge_happend = time_stamp + 1
                 # store state, with second best path

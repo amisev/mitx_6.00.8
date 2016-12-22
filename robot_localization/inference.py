@@ -160,35 +160,33 @@ def Viterbi(observations):
         if o is None:
             phi[:, i] = -1*np.log2(n_prior_distribution[:, None].T)
         else:
-            phi[:, i] = -1*np.log2(np.multiply(n_prior_distribution, B[:, 0])[:, None].T)
-            #  transition probabilities
+            phi[:, i] = -1*np.log2(np.multiply(n_prior_distribution, B[:, all_possible_observed_states.index(o)])[:, None].T)
     for i, o in enumerate(observations[1:]):
         if o is None:
             phi[:, i + 1] = -1*np.log2(np.ones(phi.shape[0])[:, None].T)
         else:
             phi[:, i + 1] = -1*np.log2(B[:, all_possible_observed_states.index(o)])
 
-    psi = np.zeros((len(all_possible_hidden_states), len(all_possible_hidden_states)))
-    psi[:, :] = -1*np.log2(A)
+    # psi = np.zeros((len(all_possible_hidden_states), len(all_possible_hidden_states)))
+    # psi[:, :] = -1*np.log2(A)
+    psi = -1*np.log2(A)
 
-    # compute messages&traceback messages
     messages = np.zeros((len(all_possible_hidden_states), num_time_steps - 1))
     traceback_messages = np.zeros((len(all_possible_hidden_states), num_time_steps - 1))
 
-    # messages[:, 0] = [np.min(phi[:, 0] + psi[:, j].T) for j, state in enumerate(all_possible_hidden_states)]
-    # traceback_messages[:, 0] = [np.argmin(phi[:, 0] + psi[:, j].T) for j, state in enumerate(all_possible_hidden_states)]
-
-    for i, o in enumerate(observations[1:-1]):
-        messages[:, i + 1] = [np.min(phi[:, i + 1] + psi[:, j].T + messages[:, i]) for j, state in enumerate(all_possible_hidden_states)]
-        traceback_messages[:, i + 1] = [np.argmin(phi[:, i + 1] + psi[:, j].T + messages[:, i]) for j, state in enumerate(all_possible_hidden_states)]
+    messages[:, 0] = [np.min(phi[:, 0] + psi[:, j].T) for j, state in enumerate(all_possible_hidden_states)]
+    traceback_messages[:, 0] = [np.argmin(phi[:, 0] + psi[:, j].T) for j, state in enumerate(all_possible_hidden_states)]
+    for time_stamp in np.arange(0, num_time_steps - 2):
+        messages[:, time_stamp + 1] = [np.min(phi[:, time_stamp + 1] + psi[:, j].T + messages[:, time_stamp]) for j, state in enumerate(all_possible_hidden_states)]
+        traceback_messages[:, time_stamp + 1] = [np.argmin(phi[:, time_stamp + 1] + psi[:, j].T + messages[:, time_stamp]) for j, state in enumerate(all_possible_hidden_states)]
 
     last_state = np.argmin(phi[:, -1] + messages[:, -1])
-    estimated_hidden_states = [None] * num_time_steps  # remove this
 
+    estimated_hidden_states = [None] * num_time_steps
     estimated_hidden_states[num_time_steps-1] = all_possible_hidden_states[last_state]
 
-    for i in np.arange(num_time_steps - 1, 0, -1):
-        estimated_hidden_states[i-1] = all_possible_hidden_states[int(traceback_messages[all_possible_hidden_states.index(estimated_hidden_states[i]), i - 1])]
+    for time_stamp in np.arange(num_time_steps - 1, 0, -1):
+        estimated_hidden_states[time_stamp - 1] = all_possible_hidden_states[int(traceback_messages[all_possible_hidden_states.index(estimated_hidden_states[time_stamp]), time_stamp - 1])]
 
     return estimated_hidden_states
 
@@ -229,8 +227,7 @@ def second_best(observations):
         if o is None:
             phi[:, i] = -1*np.log2(n_prior_distribution[:, None].T)
         else:
-            phi[:, i] = -1*np.log2(np.multiply(n_prior_distribution, B[:, 0])[:, None].T)
-    #  transition probabilities
+            phi[:, i] = -1*np.log2(np.multiply(n_prior_distribution, B[:, all_possible_observed_states.index(o)])[:, None].T)
     for i, o in enumerate(observations[1:]):
         if o is None:
             phi[:, i + 1] = -1*np.log2(np.ones(phi.shape[0])[:, None].T)
@@ -246,52 +243,72 @@ def second_best(observations):
 
     # k most likely paths
     k = 2
-
     # here we find first best path (global)
-    messages = np.zeros((len(all_possible_hidden_states), num_time_steps - 1, k))
-    traceback_messages = np.zeros((len(all_possible_hidden_states), num_time_steps - 1, k))
-    # here we will store minimal path cost from the beginning to current state
+    messages = np.zeros((len(all_possible_hidden_states), num_time_steps - 1))
+    traceback_messages = np.zeros((len(all_possible_hidden_states), num_time_steps - 1))
+    #
     path = np.zeros((len(all_possible_hidden_states), num_time_steps - 1, k))
+    #
+    messages[:, 0] = [np.min(phi[:, 0] + psi[:, j].T) for j, state in enumerate(all_possible_hidden_states)]
+    traceback_messages[:, 0] = [np.argmin(phi[:, 0] + psi[:, j].T) for j, state in enumerate(all_possible_hidden_states)]
+    path[:, 0, 0] = messages[:, 0]
+    for time_stamp in np.arange(0, num_time_steps - 2):
+        messages[:, time_stamp + 1] = [np.min(phi[:, time_stamp + 1] + psi[:, j].T + messages[:, time_stamp]) for j, state in enumerate(all_possible_hidden_states)]
+        traceback_messages[:, time_stamp + 1] = [np.argmin(phi[:, time_stamp + 1] + psi[:, j].T + messages[:, time_stamp]) for j, state in enumerate(all_possible_hidden_states)]
+        path[:, time_stamp + 1, 0] = messages[:, time_stamp + 1]
 
-    for i, o in enumerate(observations[1:-1]):
-        messages[:, i + 1, 0] = [np.min(phi[:, i + 1] + psi[:, j].T + messages[:, i, 0]) for j, state in enumerate(all_possible_hidden_states)]
-        traceback_messages[:, i + 1, 0] = [np.argmin(phi[:, i + 1] + psi[:, j].T + messages[:, i, 0]) for j, state in enumerate(all_possible_hidden_states)]
-        path[:, i + 1, 0] = path[:, i, 0] + messages[:, i + 1, 0]
-
-    last_state = np.argmin(phi[:, -1] + messages[:, -1, 0])
+    last_state = np.argmin(phi[:, -1] + messages[:, -1])
     estimated_hidden_states_1 = [None] * num_time_steps
 
     estimated_hidden_states_1[num_time_steps-1] = all_possible_hidden_states[last_state]
 
-    for i in np.arange(num_time_steps - 1, 0, -1):
-        estimated_hidden_states_1[i-1] = all_possible_hidden_states[int(traceback_messages[all_possible_hidden_states.index(estimated_hidden_states_1[i]), i - 1, 0])]
+    for time_stamp in np.arange(num_time_steps - 1, 0, -1):
+        estimated_hidden_states_1[time_stamp - 1] = all_possible_hidden_states[int(traceback_messages[all_possible_hidden_states.index(estimated_hidden_states_1[time_stamp]), time_stamp - 1])]
 
     # find k-th best path
     # merge count array
-    M = np.ones(num_time_steps)
+    # M = np.ones(num_time_steps)
+    #
+    time_merge_happend = 0
+    state_merge_happend = all_possible_hidden_states[0]
 
-    for i, o in enumerate(observations[1:-1]):
-        best_state_current = all_possible_hidden_states.index(estimated_hidden_states_1[i + 1])
-        best_state_previous = all_possible_hidden_states.index(estimated_hidden_states_1[i + 0])
+    second_best_path_candidate_min = np.inf
+    best_state_last = all_possible_hidden_states.index(estimated_hidden_states_1[num_time_steps - 1])
+
+    path[:, 0, 1] = path[:, 0, 0]
+    for time_stamp in np.arange(num_time_steps - 2):
+        best_state_current = all_possible_hidden_states.index(estimated_hidden_states_1[time_stamp + 1])
+        best_state_previous = all_possible_hidden_states.index(estimated_hidden_states_1[time_stamp + 0])
         #
-        second_best_path_current = phi[best_state_previous, i + 1] + psi[best_state_previous, best_state_current] + path[best_state_previous, i, 1]
-        second_best_path_candidate = phi[:, i + 1] + psi[:, best_state_current] + path[:, i, 0]
+        second_best_path_current = phi[best_state_previous, time_stamp + 1] + psi[best_state_previous, best_state_current] + path[best_state_previous, time_stamp, 1]
+        second_best_path_candidate = phi[:, time_stamp] + psi[:, best_state_current] + path[:, time_stamp, 0]
         #
         if second_best_path_candidate[second_best_path_candidate.argsort()[:2][1]] < second_best_path_current:
-            path[best_state_current, i + 1, 1] = second_best_path_candidate[second_best_path_candidate.argsort()[:2][1]]
-            # store time, then merge happend
-            time_merge_happend = i + 1
-            # print('time merged happend: ', time_merge_happend)
-            # store state, with second best path
-            state_merge_happend = second_best_path_candidate.argsort()[:2][1]
+            path[best_state_current, time_stamp + 1, 1] = second_best_path_candidate[second_best_path_candidate.argsort()[:2][1]]
+            # compare second best path candidate cost with global minimum
+            # print(time_stamp + 1)
+            # print(second_best_path_candidate[second_best_path_candidate.argsort()[:2][1]] + path[best_state_last, num_time_steps - 2, 0] - path[best_state_current, time_stamp, 0], path[best_state_last, num_time_steps - 2, 0])
+            if second_best_path_candidate[second_best_path_candidate.argsort()[:2][1]] + path[best_state_last, -1, 0] - path[best_state_current, time_stamp, 0] < second_best_path_candidate_min:
+                second_best_path_candidate_min = second_best_path_candidate[second_best_path_candidate.argsort()[:2][1]] + (path[best_state_last, -1, 0] - path[best_state_current, time_stamp, 0])
+                # store time, then merge happend
+                time_merge_happend = time_stamp + 1
+                # store state, with second best path
+                state_merge_happend = second_best_path_candidate.argsort()[:2][1]
         else:
-            path[best_state_current, i + 1, 1] = second_best_path_current
+            path[best_state_current, time_stamp + 1, 1] = second_best_path_current
 
-    return estimated_hidden_states_1
+    # print('time merged happend: ', time_merge_happend)
+    estimated_hidden_states = [None] * num_time_steps
+    estimated_hidden_states[time_merge_happend:] = estimated_hidden_states_1[time_merge_happend:]
+    estimated_hidden_states[time_merge_happend - 1] = all_possible_hidden_states[state_merge_happend]
+    for time_stamp in np.arange(time_merge_happend - 1, 0, -1):
+        estimated_hidden_states[time_stamp - 1] = all_possible_hidden_states[int(traceback_messages[all_possible_hidden_states.index(estimated_hidden_states[time_stamp]), time_stamp - 1])]
 
+    return estimated_hidden_states
 # -----------------------------------------------------------------------------
 # Generating data from the hidden Markov model
 #
+
 
 def generate_data(num_time_steps, make_some_observations_missing=False,
                   random_seed=None):
@@ -440,12 +457,12 @@ def main():
     print("\n")
 
     # display
-    # if use_graphics:
-    #     app = graphics.playback_positions(hidden_states,
-    #                                       observations,
-    #                                       estimated_states,
-    #                                       marginals)
-    #     app.mainloop()
+    if use_graphics:
+        app = graphics.playback_positions(hidden_states,
+                                          observations,
+                                          estimated_states,
+                                          marginals)
+        app.mainloop()
 
 
 if __name__ == '__main__':
